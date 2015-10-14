@@ -297,8 +297,8 @@ decodeByNameWith :: FromNamedRecord a
                  -> HeaderParser (Parser a)
 decodeByNameWith !opts = decodeByNameWith' parseNamedRecord opts
 
--- | Like 'decodeByName', but lets you customize how the CSV data is
--- parsed.
+-- | Like 'decodeByNameWith', but lets you pass an explicit parser value instead
+-- of using a typeclass
 decodeByNameWith' :: (NamedRecord -> Conversion.Parser a)
                   -> DecodeOptions  -- ^ Decoding options
                   -> HeaderParser (Parser a)
