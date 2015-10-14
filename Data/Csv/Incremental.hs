@@ -54,12 +54,16 @@ module Data.Csv.Incremental
     -- $indexbased
     , HasHeader(..)
     , decode
+    , decode'
     , decodeWith
+    , decodeWith'
 
     -- ** Name-based record conversion
     -- $namebased
     , decodeByName
+    , decodeByName'
     , decodeByNameWith
+    , decodeByNameWith'
 
     -- * Encoding
     -- ** Index-based record conversion
@@ -241,18 +245,34 @@ decode :: FromRecord a
        -> Parser a
 decode = decodeWith defaultDecodeOptions
 
+-- | Like 'decode', but lets you pass an explicit parser value instead of
+-- using a typeclass
+decode' :: (Record -> Conversion.Parser a)
+        -> HasHeader    -- ^ Data contains header that should be skipped
+        -> Parser a
+decode' p = decodeWith' p defaultDecodeOptions
+
 -- | Like 'decode', but lets you customize how the CSV data is parsed.
 decodeWith :: FromRecord a
            => DecodeOptions  -- ^ Decoding options
            -> HasHeader      -- ^ Data contains header that should be
                              -- skipped
            -> Parser a
-decodeWith !opts hasHeader = case hasHeader of
+decodeWith !opts hasHeader = decodeWith' parseRecord opts hasHeader
+
+-- | Like 'decodeWith', but lets you pass an explicit parser value instead of
+-- using a typeclass
+decodeWith' :: (Record -> Conversion.Parser a)
+            -> DecodeOptions  -- ^ Decoding options
+            -> HasHeader      -- ^ Data contains header that should be
+                             -- skipped
+            -> Parser a
+decodeWith' p !opts hasHeader = case hasHeader of
     HasHeader -> go (decodeHeaderWith opts)
-    NoHeader  -> Many [] $ \ s -> decodeWithP parseRecord opts s
+    NoHeader  -> Many [] $ \ s -> decodeWithP p opts s
   where go (FailH rest msg) = Fail rest msg
         go (PartialH k)     = Many [] $ \ s' -> go (k s')
-        go (DoneH _ rest)   = decodeWithP parseRecord opts rest
+        go (DoneH _ rest)   = decodeWithP p opts rest
 
 ------------------------------------------------------------------------
 
@@ -264,17 +284,30 @@ decodeByName :: FromNamedRecord a
              => HeaderParser (Parser a)
 decodeByName = decodeByNameWith defaultDecodeOptions
 
+-- | Like 'decodeByName', but lets you pass an explicit parser value instead of
+-- using a typeclass
+decodeByName' :: (NamedRecord -> Conversion.Parser a)
+              -> HeaderParser (Parser a)
+decodeByName' p = decodeByNameWith' p defaultDecodeOptions
+
 -- | Like 'decodeByName', but lets you customize how the CSV data is
 -- parsed.
 decodeByNameWith :: FromNamedRecord a
                  => DecodeOptions  -- ^ Decoding options
                  -> HeaderParser (Parser a)
-decodeByNameWith !opts = go (decodeHeaderWith opts)
+decodeByNameWith !opts = decodeByNameWith' parseNamedRecord opts
+
+-- | Like 'decodeByName', but lets you customize how the CSV data is
+-- parsed.
+decodeByNameWith' :: (NamedRecord -> Conversion.Parser a)
+                  -> DecodeOptions  -- ^ Decoding options
+                  -> HeaderParser (Parser a)
+decodeByNameWith' p !opts = go (decodeHeaderWith opts)
   where
     go (FailH rest msg) = FailH rest msg
     go (PartialH k)     = PartialH $ \ s -> go (k s)
     go (DoneH hdr rest) =
-        DoneH hdr (decodeWithP (parseNamedRecord . toNamedRecord hdr) opts rest)
+        DoneH hdr (decodeWithP (p . toNamedRecord hdr) opts rest)
 
 ------------------------------------------------------------------------
 
