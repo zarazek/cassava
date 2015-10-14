@@ -25,10 +25,10 @@ Library
     Data.Csv.Incremental
     Data.Csv.Parser
     Data.Csv.Streaming
+    Data.Csv.Conversion
 
   Other-modules:
     Data.Csv.Compat.Monoid
-    Data.Csv.Conversion
     Data.Csv.Conversion.Internal
     Data.Csv.Encoding
     Data.Csv.Types
