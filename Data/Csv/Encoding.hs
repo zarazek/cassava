@@ -24,9 +24,9 @@ module Data.Csv.Encoding
     , DecodeOptions(..)
     , defaultDecodeOptions
     , decodeWith
-    , decodeWith'
+    , decodeWithP
     , decodeByNameWith
-    , decodeByNameWith'
+    , decodeByNameWithP
     , EncodeOptions(..)
     , defaultEncodeOptions
     , encodeWith
@@ -140,22 +140,22 @@ idDecodeWith :: DecodeOptions -> HasHeader -> L.ByteString
 idDecodeWith = decodeWithC Parser.csv
 
 -- | Like 'decodeWith'', but lets you specify a parser function.
-decodeWith' :: (Record -> Conversion.Parser a)
+decodeWithP :: (Record -> Conversion.Parser a)
             -- ^ Custom parser function
             -> DecodeOptions -- ^ Decoding options
             -> HasHeader     -- ^ Data contains header that should be
                              -- skipped
             -> L.ByteString  -- ^ CSV data
             -> Either String (Vector a)
-decodeWith' _parseRecord = decodeWithC (csv _parseRecord)
-{-# INLINE [1] decodeWith' #-}
+decodeWithP _parseRecord = decodeWithC (csv _parseRecord)
+{-# INLINE [1] decodeWithP #-}
 
 -- | Decode CSV data using the provided parser, skipping a leading
 -- header if 'hasHeader' is 'HasHeader'. Returns 'Left' @errMsg@ on
 -- failure.
 decodeWithC :: (DecodeOptions -> AL.Parser a) -> DecodeOptions -> HasHeader
             -> BL8.ByteString -> Either String a
-decodeWithC p !opts hasHeader = decodeWithP parser
+decodeWithC p !opts hasHeader = decodeWithP' parser
   where parser = case hasHeader of
             HasHeader -> header (decDelimiter opts) *> p opts
             NoHeader  -> p opts
@@ -167,16 +167,16 @@ decodeByNameWith :: FromNamedRecord a
                  => DecodeOptions  -- ^ Decoding options
                  -> L.ByteString   -- ^ CSV data
                  -> Either String (Header, Vector a)
-decodeByNameWith !opts = decodeWithP (csvWithHeader parseNamedRecord opts)
+decodeByNameWith !opts = decodeWithP' (csvWithHeader parseNamedRecord opts)
 
 -- | Like 'decodeByNameWith', but lets you specify a parser function.
-decodeByNameWith' :: (NamedRecord -> Conversion.Parser a)
+decodeByNameWithP :: (NamedRecord -> Conversion.Parser a)
                   -- ^ Custom parser function
                   -> DecodeOptions -- ^ Decoding options
                   -> L.ByteString  -- ^ CSV data
                   -> Either String (Header, Vector a)
-decodeByNameWith' _parseNamedRecord !opts =
-  decodeWithP (csvWithHeader _parseNamedRecord opts)
+decodeByNameWithP _parseNamedRecord !opts =
+  decodeWithP' (csvWithHeader _parseNamedRecord opts)
 
 -- | Should quoting be applied to fields, and at which level
 data Quoting
@@ -358,8 +358,8 @@ prependToAll :: Builder -> [Builder] -> [Builder]
 prependToAll _   []     = []
 prependToAll sep (x:xs) = sep <> x : prependToAll sep xs
 
-decodeWithP :: AL.Parser a -> L.ByteString -> Either String a
-decodeWithP p s =
+decodeWithP' :: AL.Parser a -> L.ByteString -> Either String a
+decodeWithP' p s =
     case AL.parse p s of
       AL.Done _ v     -> Right v
       AL.Fail left _ msg -> Left errMsg
@@ -368,7 +368,7 @@ decodeWithP p s =
                    (if BL8.length left > 100
                     then (take 100 $ BL8.unpack left) ++ " (truncated)"
                     else show (BL8.unpack left))
-{-# INLINE decodeWithP #-}
+{-# INLINE decodeWithP' #-}
 
 -- These alternative implementation of the 'csv' and 'csvWithHeader'
 -- parsers from the 'Parser' module performs the
