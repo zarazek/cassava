@@ -42,6 +42,9 @@ module Data.Csv.Conversion
     , record
     , namedRecord
     , header
+    , typeError
+    , parseUnsigned
+    , parseSigned
     ) where
 
 import Control.Applicative (Alternative, (<|>), empty)
